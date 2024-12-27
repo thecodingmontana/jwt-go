@@ -9,7 +9,9 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
+	"github.com/thecodingmontana/jwt-go/internal/database/models"
 	"github.com/thecodingmontana/jwt-go/internal/routes"
+	"github.com/thecodingmontana/jwt-go/pkg/database"
 )
 
 func main() {
@@ -25,6 +27,20 @@ func main() {
 		log.Fatalf("PORT is missing in the .env file")
 	}
 
+	// Environmental Variables
+	DATABASE_URL, dbURLFound := os.LookupEnv("DATABASE_URL")
+
+	if !dbURLFound {
+		log.Fatalf("DATABASE_URL is missing in the .env file")
+	}
+
+	// connect to Database
+	conn := database.ConnectDB(DATABASE_URL)
+	defer conn.Close()
+
+	// initialize SQLC queries
+	queries := models.New(conn)
+
 	router := chi.NewRouter()
 
 	// Middlewares
@@ -38,7 +54,7 @@ func main() {
 		MaxAge:           300,
 	}))
 
-	routes.RegisterRoutes(router)
+	routes.RegisterRoutes(router, queries)
 
 	// Server instance
 	server := &http.Server{
